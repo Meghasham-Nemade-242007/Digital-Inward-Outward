@@ -3,6 +3,7 @@ const ActivityLog = require('../models/ActivityLog');
 const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
 // Helper to get client IP
 const getIp = (req) => {
@@ -57,7 +58,10 @@ exports.createOutward = async (req, res) => {
     // File upload path
     let uploadedFile = null;
     if (req.file) {
-      uploadedFile = `/uploads/${req.file.filename}`;
+      const uploadResult = await uploadToCloudinary(req.file.path, 'outwards');
+      uploadedFile = uploadResult.secure_url;
+      // Delete temporary local file
+      fs.unlinkSync(req.file.path);
     }
 
     // Generate QR Code content
@@ -110,6 +114,9 @@ exports.createOutward = async (req, res) => {
 
     res.status(201).json({ success: true, data: outward });
   } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -234,12 +241,19 @@ exports.updateOutward = async (req, res) => {
     if (req.file) {
       // Remove old file if it exists
       if (outward.uploadedFile) {
-        const oldPath = path.join(__dirname, '..', outward.uploadedFile);
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
+        if (outward.uploadedFile.startsWith('http')) {
+          await deleteFromCloudinary(outward.uploadedFile);
+        } else {
+          const oldPath = path.join(__dirname, '..', outward.uploadedFile);
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+          }
         }
       }
-      uploadedFile = `/uploads/${req.file.filename}`;
+      const uploadResult = await uploadToCloudinary(req.file.path, 'outwards');
+      uploadedFile = uploadResult.secure_url;
+      // Delete temporary local file
+      fs.unlinkSync(req.file.path);
     }
 
     // Regnerate QR with updated info (keeping the same outwardId)
@@ -285,6 +299,9 @@ exports.updateOutward = async (req, res) => {
 
     res.status(200).json({ success: true, data: outward });
   } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -359,9 +376,13 @@ exports.deleteOutward = async (req, res) => {
 
     // Remove file from disk
     if (outward.uploadedFile) {
-      const filePath = path.join(__dirname, '..', outward.uploadedFile);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (outward.uploadedFile.startsWith('http')) {
+        await deleteFromCloudinary(outward.uploadedFile);
+      } else {
+        const filePath = path.join(__dirname, '..', outward.uploadedFile);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
     }
 

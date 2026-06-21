@@ -759,7 +759,7 @@ const InwardManagement = () => {
               
               {selectedRecord.uploadedFile ? (
                 <a 
-                  href={`http://localhost:5000${selectedRecord.uploadedFile}`} 
+                  href={selectedRecord.uploadedFile.startsWith('http') ? selectedRecord.uploadedFile : `http://localhost:5000${selectedRecord.uploadedFile}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="btn btn-primary"

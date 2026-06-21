@@ -681,7 +681,7 @@ const OutwardManagement = () => {
               )}
               
               {selectedRecord.uploadedFile ? (
-                <a href={`http://localhost:5000${selectedRecord.uploadedFile}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <a href={selectedRecord.uploadedFile.startsWith('http') ? selectedRecord.uploadedFile : `http://localhost:5000${selectedRecord.uploadedFile}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <FileText size={16} /> Open Document File
                 </a>
               ) : (

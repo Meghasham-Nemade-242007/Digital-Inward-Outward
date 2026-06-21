@@ -457,7 +457,7 @@ const Dashboard = () => {
               
               {selectedDoc.uploadedFile ? (
                 <a 
-                  href={`http://localhost:5000${selectedDoc.uploadedFile}`} 
+                  href={selectedDoc.uploadedFile.startsWith('http') ? selectedDoc.uploadedFile : `http://localhost:5000${selectedDoc.uploadedFile}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="btn btn-primary"

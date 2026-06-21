@@ -3,6 +3,7 @@ const ActivityLog = require('../models/ActivityLog');
 const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
 // Helper to get client IP
 const getIp = (req) => {
@@ -55,8 +56,10 @@ exports.createInward = async (req, res) => {
     // File upload path
     let uploadedFile = null;
     if (req.file) {
-      // Save relative path for easy serving/access
-      uploadedFile = `/uploads/${req.file.filename}`;
+      const uploadResult = await uploadToCloudinary(req.file.path, 'inwards');
+      uploadedFile = uploadResult.secure_url;
+      // Delete temporary local file
+      fs.unlinkSync(req.file.path);
     }
 
     // Generate QR Code content
@@ -107,6 +110,9 @@ exports.createInward = async (req, res) => {
 
     res.status(201).json({ success: true, data: inward });
   } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -232,12 +238,19 @@ exports.updateInward = async (req, res) => {
     if (req.file) {
       // Remove old file if it exists
       if (inward.uploadedFile) {
-        const oldPath = path.join(__dirname, '..', inward.uploadedFile);
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
+        if (inward.uploadedFile.startsWith('http')) {
+          await deleteFromCloudinary(inward.uploadedFile);
+        } else {
+          const oldPath = path.join(__dirname, '..', inward.uploadedFile);
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+          }
         }
       }
-      uploadedFile = `/uploads/${req.file.filename}`;
+      const uploadResult = await uploadToCloudinary(req.file.path, 'inwards');
+      uploadedFile = uploadResult.secure_url;
+      // Delete temporary local file
+      fs.unlinkSync(req.file.path);
     }
 
     // Regnerate QR with updated info (keeping the same inwardId)
@@ -281,6 +294,9 @@ exports.updateInward = async (req, res) => {
 
     res.status(200).json({ success: true, data: inward });
   } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -352,9 +368,13 @@ exports.deleteInward = async (req, res) => {
 
     // Remove file from disk
     if (inward.uploadedFile) {
-      const filePath = path.join(__dirname, '..', inward.uploadedFile);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (inward.uploadedFile.startsWith('http')) {
+        await deleteFromCloudinary(inward.uploadedFile);
+      } else {
+        const filePath = path.join(__dirname, '..', inward.uploadedFile);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
     }
 

@@ -230,7 +230,7 @@ const Tracking = () => {
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
               {record.uploadedFile ? (
                 <a 
-                  href={`http://localhost:5000${record.uploadedFile}`} 
+                  href={record.uploadedFile.startsWith('http') ? record.uploadedFile : `http://localhost:5000${record.uploadedFile}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="btn btn-primary"
