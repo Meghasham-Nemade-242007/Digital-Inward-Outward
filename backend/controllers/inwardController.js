@@ -58,8 +58,10 @@ exports.createInward = async (req, res) => {
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, 'inwards');
       uploadedFile = uploadResult.secure_url;
-      // Delete temporary local file
-      fs.unlinkSync(req.file.path);
+      // Delete temporary local file only if successfully uploaded to Cloudinary
+      if (!uploadResult.isFallback) {
+        fs.unlinkSync(req.file.path);
+      }
     }
 
     // Generate QR Code content
@@ -249,8 +251,10 @@ exports.updateInward = async (req, res) => {
       }
       const uploadResult = await uploadToCloudinary(req.file.path, 'inwards');
       uploadedFile = uploadResult.secure_url;
-      // Delete temporary local file
-      fs.unlinkSync(req.file.path);
+      // Delete temporary local file only if successfully uploaded to Cloudinary
+      if (!uploadResult.isFallback) {
+        fs.unlinkSync(req.file.path);
+      }
     }
 
     // Regnerate QR with updated info (keeping the same inwardId)

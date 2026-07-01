@@ -1,5 +1,6 @@
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
+const path = require('path');
 
 const isConfigured = 
   process.env.CLOUDINARY_CLOUD_NAME && 
@@ -21,25 +22,38 @@ if (isConfigured) {
 
 /**
  * Uploads a local file to Cloudinary and returns the upload result.
+ * Falls back to local storage if Cloudinary is not configured or upload fails.
  * @param {string} localFilePath - Path to the local temporary file.
  * @param {string} folder - Folder name in Cloudinary.
- * @returns {Promise<object>} - Cloudinary upload result object
+ * @returns {Promise<object>} - Cloudinary upload result or local fallback details
  */
 const uploadToCloudinary = async (localFilePath, folder = 'inward_outward') => {
+  if (!localFilePath) return null;
+  const fileName = path.basename(localFilePath);
+
   if (!isConfigured) {
-    throw new Error('Cloudinary is not configured. Please supply valid CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your .env file.');
+    console.warn(`⚠️ Cloudinary is not configured. Falling back to local storage for: ${fileName}`);
+    return {
+      secure_url: `/uploads/${fileName}`,
+      isFallback: true
+    };
   }
 
   try {
-    if (!localFilePath) return null;
     const result = await cloudinary.uploader.upload(localFilePath, {
       folder: folder,
       resource_type: 'auto' // Crucial: allows PDF, DOC, DOCX as well as images
     });
-    return result;
+    return {
+      ...result,
+      isFallback: false
+    };
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
-    throw error;
+    console.error(`⚠️ Cloudinary upload error for ${fileName}, falling back to local storage:`, error.message || error);
+    return {
+      secure_url: `/uploads/${fileName}`,
+      isFallback: true
+    };
   }
 };
 
